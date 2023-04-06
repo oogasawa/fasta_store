@@ -45,9 +45,9 @@ public class FastaStorePut {
         if (args.length > 2) {
             FastaStorePut store = new FastaStorePut();
             store.setEnvHome(Path.of(args[0]));
-            store.setup();
+
             store.readAll(Path.of(args[1]), args[2]);
-            store.shutdown();
+            
         } else {
             System.out.println(
                     "Usage: java -cp fastastore-fat.jar jp.ac.nig.ddbj.fastastore.FastaStorePut bdb_dir fasta_dir fasta_ext");
