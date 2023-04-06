@@ -6,11 +6,11 @@
 
   <groupId>jp.ac.nig.ddbj</groupId>
   <artifactId>fasta-store</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.0.0</version>
 
   <name>fasta-store</name>
   <!-- FIXME change it to the project's website -->
-  <url>http://github.com/oogasawa</url>
+  <url>http://github.com/oogasawa/fasta_store</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

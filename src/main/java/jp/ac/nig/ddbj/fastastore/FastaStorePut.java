@@ -1,3 +1,4 @@
+
 package jp.ac.nig.ddbj.fastastore;
 
 import java.io.BufferedReader;
@@ -34,20 +35,75 @@ public class FastaStorePut {
     private EntityStore store;
     private FastaDA accessor;
 
-
+    Pattern pSeqId = Pattern.compile("^>(\\S+?)\\|");
+    Pattern pRefseqId = Pattern.compile("^>(\\S+?)\s");
+    
+    private long counter = 0;
+    private long start;
+    
     public static void main(String[] args) {
-        if (args.length > 0) {
+
+        if (args.length > 2) {
             FastaStorePut store = new FastaStorePut(Path.of(args[0]));
+            store.setup();
+            store.readAll(Path.of(args[1]), args[2]);
+            store.shutdown();
+        } else {
+            System.out.println(
+                    "Usage: java -cp fastastore-fat.jar jp.ac.nig.ddbj.fastastore.FastaStorePut bdb_dir fasta_dir fasta_ext");
         }
-        else {
-            System.out.println("Usage: java -cp fastastore-fat.jar jp.ac.nig.ddbj.fastastore.FastaStorePut bdb_dir");
-        }
+        
     }
 
     
     public FastaStorePut(Path envPath) {
         envHome = envPath.toFile();
+        if (!envHome.exists()) {
+            envHome.mkdirs();
+        }
     }
+
+
+
+    /** Parses a definition line and returns a sequenceId.
+     *
+     * There are several types of FASTA definition lines.
+     *
+     * 1. RefSeq FASTA definition line.
+     *
+     * <pre>{@code
+     * >NZ_CP088252.1 Frateuria soli strain 5GH9-11 chromosome, complete genome
+     * }</pre>
+     *
+     * This case, the sequence ID is {@code NZ_CP099252.1}.
+     * 
+     * 2. DDBJ nucleic acids definition line.
+     * <pre>{@code
+     * >CP100557|CP100557.1 Gallus gallus breed Huxu chromosome 3
+     * }</pre>
+     *
+     * In this example, the sequence ID is {@code CP100557}.
+     */
+    public String parseSequenceId(String definitionLine) {
+        String seqId = null;
+        
+        Matcher m = pSeqId.matcher(definitionLine);
+        if (m.find()) {
+            seqId = m.group(1);
+            return seqId;
+        }
+
+        m = pRefseqId.matcher(definitionLine);
+        if (m.find()) {
+            seqId = m.group(1);
+            return seqId;
+        }
+        
+        
+        return seqId;
+    }
+    
+
     
     
     public void setup() throws DatabaseException {
@@ -61,6 +117,7 @@ public class FastaStorePut {
         environment = new Environment(envHome, envConfig);
         store = new EntityStore(environment, "FastaStore", storeConfig);
 
+        accessor = new FastaDA(store);
     }
 
     
@@ -77,14 +134,17 @@ public class FastaStorePut {
     public void readFasta(BufferedReader fastaReader) {
 
         logger.logp(Level.INFO, FastaStorePut.class.getName(), "readFasta", "enter");
-        
+
         Pattern pDescLine = Pattern.compile("^>(\\S+)\s+(.+)$");
         Pattern pSeqLine = Pattern.compile("^([ a-zA-Z]+)$");
         Pattern pNullLine = Pattern.compile("^\s*$");
 
-        FastaEntity entity = null;
+
+        long sequenceLineNumber = 0;
         
-        String key = null;        
+        FastaEntity entity = null;
+
+        String key = null;
         String line = null;
 
         try {
@@ -94,15 +154,27 @@ public class FastaStorePut {
                 Matcher m = pDescLine.matcher(line);
                 if (m.find()) {
 
+                    sequenceLineNumber = 0;
+                    if (counter++ % 10000 == 0) {
+                        long end = System.currentTimeMillis();
+                        logger.log(Level.INFO, 
+                                String.format("entry count, elapsed time = %d\t%d", counter, (end - start) / 1000L));
+                        logger.log(Level.INFO, line);
+                        String seqId = parseSequenceId(line);
+                        logger.log(Level.INFO, seqId);
+                    }
+
+                    
                     if (key != null) {
-                        //if( accessor.pIdx.get(key) != null) {
-                        //    accessor.pIdx.delete(key);
-                        //}
+                        // if( accessor.pIdx.get(key) != null) {
+                        // accessor.pIdx.delete(key);
+                        // }
                         accessor.pIdx.put(entity);
+
                     }
 
                     entity = new FastaEntity();
-                    String seqId = entity.parseSequenceId(line);
+                    String seqId = parseSequenceId(line);
                     key = seqId;
 
                     entity.setSequenceId(seqId);
@@ -121,17 +193,23 @@ public class FastaStorePut {
                 m = pSeqLine.matcher(line);
                 if (m.matches()) {
                     entity.addLine(line);
+
+                    if (++sequenceLineNumber % 100000 == 0) {
+                        logger.log(Level.INFO, String.format("sequenceID, sequenceLineNumber = %s\t%d", key, sequenceLineNumber));
+                    }
+                    
                     continue;
                 }
 
                 logger.log(Level.WARNING, "Unexpected line in the FASTA: " + line);
             }
 
+            
             accessor.pIdx.put(entity);
             
-        } catch (IOException e) {
+        } catch (Exception e) {
             logger.log(Level.SEVERE, "Exception occurred while reading line: " + line, e);
-        }
+        } 
         
     }
     
@@ -153,6 +231,8 @@ public class FastaStorePut {
         logger.log(Level.INFO, "fastaBasePath: " + fastaBasePath.toString());
 
         setup();
+
+        start = System.currentTimeMillis();
         
         Stream.of(fastaBasePath.toFile().listFiles())
             .filter(f->f.getName().endsWith(ext))
@@ -173,6 +253,7 @@ public class FastaStorePut {
                         else {
                             br = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
                         }
+                        logger.log(Level.INFO, "filename: " + f.toString());
                         this.readFasta(br);
                     }
                     catch (IOException e) {

@@ -1,17 +1,7 @@
 package jp.ac.nig.ddbj.fastastore;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.Path;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
-import java.util.zip.GZIPInputStream;
 
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;

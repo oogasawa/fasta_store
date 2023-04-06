@@ -29,7 +29,7 @@ import com.sleepycat.persist.model.PrimaryKey;
 public class FastaEntity {
 
 
-    Pattern pSeqId = Pattern.compile("^>(\\S+?)\\|");
+
     
     @PrimaryKey
     private String sequenceId = null;
@@ -78,28 +78,6 @@ public class FastaEntity {
         return sequenceId;
     }
 
-
-    /** Parses a definition line and returns a sequenceId.
-     *
-     * The FASTA definition line is assumed to have the string pattern represented by the following example.
-     *
-     * <pre>{@code
-     * >CP100557|CP100557.1 Gallus gallus breed Huxu chromosome 3
-     * }</pre>
-     *
-     * In this example, the sequence ID is {@code CP100557}.
-     */
-    public String parseSequenceId(String definitionLine) {
-        String seqId = null;
-        
-        Matcher m = pSeqId.matcher(definitionLine);
-        if (m.find()) {
-            seqId = m.group(1);
-        }
-        
-        return seqId;
-    }
-    
     public void setFastaData(ArrayList<String> value) {
         this.fastaData = value;
     }
