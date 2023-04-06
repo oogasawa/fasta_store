@@ -52,14 +52,15 @@ public class WebBlastFastaTeam {
 
             ArrayList<CompletableFuture<Void>> jobList = new ArrayList<>();
             WebBlastFastaDirs info = new WebBlastFastaDirs();
-            for (WebBlastFastaDirs.FastaDir r : info.getFastaDirs()) {
+            info.setFastaBaseDir(Path.of(System.getenv("HOME")).resolve("blast_test_dataset"));
+            for (WebBlastFastaDirs.FastaInfo r : info.getFastaDirs()) {
 
                 // Initialize actors.
                 ActorRef<FastaStorePut> actor = system.actorOf(r.dsName(), new FastaStorePut());
-                actor.tell(a -> a.setEnvHome(Path.of(bdbDir))).get();
+                actor.tell(a -> a.setEnvHome(Path.of(bdbDir).resolve("r.dsName()"))).get();
 
                 // Execute actor's jobs.
-                Path fastaDir = info.getBaseDir().resolve(r.fastaDir());
+                Path fastaDir = info.getFastaBaseDir().resolve(r.fastaDir());
                 logger.info("FASTA directory (resolved): " + fastaDir.toString());
                 jobList.add(actor.tell(a -> a.readAll(fastaDir, r.extension()), system.getWorkStealingPool()));
             }

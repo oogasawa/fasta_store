@@ -136,7 +136,8 @@ public class FastaStorePut {
         setup();
 
         start = System.currentTimeMillis();
-        
+
+        logger.info("fastaBasePath " + fastaBasePath.toString());
         Stream.of(fastaBasePath.toFile().listFiles())
             .filter(f->f.getName().endsWith(ext))
             .sorted((f1, f2)->{
