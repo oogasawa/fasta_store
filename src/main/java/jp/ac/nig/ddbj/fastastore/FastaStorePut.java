@@ -1,4 +1,3 @@
-
 package jp.ac.nig.ddbj.fastastore;
 
 import java.io.BufferedReader;
@@ -44,7 +43,8 @@ public class FastaStorePut {
     public static void main(String[] args) {
 
         if (args.length > 2) {
-            FastaStorePut store = new FastaStorePut(Path.of(args[0]));
+            FastaStorePut store = new FastaStorePut();
+            store.setEnvHome(Path.of(args[0]));
             store.setup();
             store.readAll(Path.of(args[1]), args[2]);
             store.shutdown();
@@ -55,15 +55,27 @@ public class FastaStorePut {
         
     }
 
-    
-    public FastaStorePut(Path envPath) {
-        envHome = envPath.toFile();
-        if (!envHome.exists()) {
-            envHome.mkdirs();
+
+
+
+    /** Checks if a given file is a gzipped file.
+     *
+     * It is judged by whether the extension is "gz" or not.
+     * 
+     * @param file A file to be checked.
+     * @return true if the given file is a gipped file. Otherwise false.
+      */
+    public boolean isGz(File file) {
+        if (file.toString().endsWith(".gz")) {
+            return true;
+        }
+        else {
+            return false;
         }
     }
 
 
+    
 
     /** Parses a definition line and returns a sequenceId.
      *
@@ -104,33 +116,63 @@ public class FastaStorePut {
     }
     
 
-    
-    
-    public void setup() throws DatabaseException {
-        EnvironmentConfig envConfig = new EnvironmentConfig();
-        StoreConfig storeConfig = new StoreConfig();
 
-        envConfig.setAllowCreate(true);
-        storeConfig.setAllowCreate(true);
 
-        // Open the environment and entity store
-        environment = new Environment(envHome, envConfig);
-        store = new EntityStore(environment, "FastaStore", storeConfig);
+    /** Reads all FASTA files in a given directory to a BDB database in date order.
+     *
+     * If there are duplicate sequence IDs, the older data will be overwritten by the later loaded one
+     * (i.e., the one with the newer file update date/time).
+     *
+     * Therefore, sequence IDs will not overlap on the resulting database.
+     * 
+     * @param fastaBasePath A directory where FASTA files are located.
+     * @param ext An extension. (e.g. ".fna.gz")
+     */
+    public void readAll(Path fastaBasePath, String ext) {
 
-        accessor = new FastaDA(store);
-    }
+        logger.logp(Level.INFO, FastaStorePut.class.getName(), "readAll", "enter");
+        logger.log(Level.INFO, "fastaBasePath: " + fastaBasePath.toString());
 
-    
+        setup();
 
-    public void shutdown() throws DatabaseException {
-
-        store.close();
-        environment.close();
+        start = System.currentTimeMillis();
         
+        Stream.of(fastaBasePath.toFile().listFiles())
+            .filter(f->f.getName().endsWith(ext))
+            .sorted((f1, f2)->{
+                    if ( f1.lastModified() > f2.lastModified() )
+                        return 1;
+                    else if (f1.lastModified() == f2.lastModified())
+                        return 0;
+                    else
+                        return -1;
+                })
+            .forEach((f)->{
+                    BufferedReader br;
+                    try {
+                        if (isGz(f)) {
+                            br = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
+                        }
+                        else {
+                            br = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
+                        }
+                        logger.log(Level.INFO, "filename: " + f.toString());
+                        this.readFasta(br);
+                    }
+                    catch (IOException e) {
+                        logger.log(Level.SEVERE, "Can not read: " + f.toString(), e);
+                    }
+                });
+
+        shutdown();
+        
+        logger.logp(Level.INFO, FastaStorePut.class.getName(), "readAll", "exit");
     }
 
 
 
+
+    
     public void readFasta(BufferedReader fastaReader) {
 
         logger.logp(Level.INFO, FastaStorePut.class.getName(), "readFasta", "enter");
@@ -214,74 +256,43 @@ public class FastaStorePut {
     }
     
 
-
-    /** Reads all FASTA files in a given directory to a BDB database in date order.
+    /** Sets the base directory of BerkeleyDB Environment.
      *
-     * If there are duplicate sequence IDs, the older data will be overwritten by the later loaded one
-     * (i.e., the one with the newer file update date/time).
-     *
-     * Therefore, sequence IDs will not overlap on the resulting database.
-     * 
-     * @param fastaBasePath A directory where FASTA files are located.
-     * @param ext An extension. (e.g. ".fna.gz")
+     * @param envPath A Path object that represents the environment base directory.
      */
-    public void readAll(Path fastaBasePath, String ext) {
-
-        logger.logp(Level.INFO, FastaStorePut.class.getName(), "readAll", "enter");
-        logger.log(Level.INFO, "fastaBasePath: " + fastaBasePath.toString());
-
-        setup();
-
-        start = System.currentTimeMillis();
-        
-        Stream.of(fastaBasePath.toFile().listFiles())
-            .filter(f->f.getName().endsWith(ext))
-            .sorted((f1, f2)->{
-                    if ( f1.lastModified() > f2.lastModified() )
-                        return 1;
-                    else if (f1.lastModified() == f2.lastModified())
-                        return 0;
-                    else
-                        return -1;
-                })
-            .forEach((f)->{
-                    BufferedReader br;
-                    try {
-                        if (isGz(f)) {
-                            br = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
-                        }
-                        else {
-                            br = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
-                        }
-                        logger.log(Level.INFO, "filename: " + f.toString());
-                        this.readFasta(br);
-                    }
-                    catch (IOException e) {
-                        logger.log(Level.SEVERE, "Can not read: " + f.toString(), e);
-                    }
-                });
-
-        shutdown();
-        
-        logger.logp(Level.INFO, FastaStorePut.class.getName(), "readAll", "exit");
+    public void setEnvHome(Path envPath) {
+        envHome = envPath.toFile();
+        if (!envHome.exists()) {
+            envHome.mkdirs();
+        }        
     }
 
 
-    /** Checks if a given file is a gzipped file.
-     *
-     * It is judged by whether the extension is "gz" or not.
-     * 
-     * @param file A file to be checked.
-     * @return true if the given file is a gipped file. Otherwise false.
-      */
-    public boolean isGz(File file) {
-        if (file.toString().endsWith(".gz")) {
-            return true;
-        }
-        else {
-            return false;
-        }
+    
+    public void setup() throws DatabaseException {
+        EnvironmentConfig envConfig = new EnvironmentConfig();
+        StoreConfig storeConfig = new StoreConfig();
+
+        envConfig.setAllowCreate(true);
+        storeConfig.setAllowCreate(true);
+
+        // Open the environment and entity store
+        environment = new Environment(envHome, envConfig);
+        store = new EntityStore(environment, "FastaStore", storeConfig);
+
+        accessor = new FastaDA(store);
     }
+
+    
+
+    public void shutdown() throws DatabaseException {
+
+        store.close();
+        environment.close();
+        
+    }
+
+
 
     
     
