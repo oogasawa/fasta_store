@@ -29,7 +29,7 @@ public class WebBlastFastaTeam {
      *
      * It is assumed that all actors use the same BDB Environment.
      */
-    String bdbEnvDir = null;
+    Path bdbEnvDir = null;
     
     int maxWorkerThreads = 2;
 
@@ -43,7 +43,7 @@ public class WebBlastFastaTeam {
         if (args.length > 0) {
 
             WebBlastFastaTeam team = new WebBlastFastaTeam();
-            team.setBdbEnvDir(args[0]);
+            team.setBdbEnvDir(Path.of(args[0]));
             team.readFastaInfo();
             team.start();
         }
@@ -148,7 +148,7 @@ public class WebBlastFastaTeam {
 
 
     
-    public void setBdbEnvDir(String dir) {
+    public void setBdbEnvDir(Path dir) {
         this.bdbEnvDir = dir;
     }
 
