@@ -19,6 +19,5 @@ public class FastaDA {
         
         pIdx = store.getPrimaryIndex(String.class, FastaEntity.class);
     }
-
     
 }

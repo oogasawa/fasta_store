@@ -28,9 +28,6 @@ import com.sleepycat.persist.model.PrimaryKey;
 @Entity
 public class FastaEntity {
 
-
-
-    
     @PrimaryKey
     private String sequenceId = null;
 
@@ -89,7 +86,4 @@ public class FastaEntity {
 
 
 }
-
-
-
 

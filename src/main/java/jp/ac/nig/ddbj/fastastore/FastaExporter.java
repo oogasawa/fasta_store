@@ -26,7 +26,7 @@ public class FastaExporter {
     private static final Logger logger = Logger.getLogger("jp.ac.nig.ddbj.fastastore.FastaExporter");
     
     /** The database environment's home directory. */
-    private static File envHome;
+    private static File envDir;
 
     private Environment environment;
     private EntityStore store;
@@ -35,7 +35,8 @@ public class FastaExporter {
 
     public static void main(String args[]) {
         if (args.length > 1) {
-            FastaExporter store = new FastaExporter(Path.of(args[0]));
+            FastaExporter store = new FastaExporter();
+            store.setEnvDir(Path.of(args[0]));
             try (PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(args[11])))) {
                 store.export(pw);
             }
@@ -53,16 +54,30 @@ public class FastaExporter {
      *
      * @param dir A base directory of a BerkeleyDB environment.
       */
-    public FastaExporter(Path dir) {
-        envHome = dir.toFile();
+    public FastaExporter() {}
+
+
+    public void setEnvDir(Path dir) {
+        envDir = dir.toFile();
+    }
+
+    
+    public void export(String fileName)  {
+        try (PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(fileName)))) {
+            this.export(pw);
+        }
+        catch (IOException e) {
+            logger.log(Level.SEVERE, "Error on output file: " + fileName, e);
+        }
+
     }
 
 
-    public void export(PrintWriter writer) throws DatabaseException {
+    public void export(PrintWriter writer)  {
 
         setup();
         //accessor = new FastaDA(store);
-
+        
         PrimaryIndex<String, FastaEntity> pIndex = store.getPrimaryIndex(String.class, FastaEntity.class);
         EntityCursor<FastaEntity> pi_cursor = pIndex.entities();
 
@@ -73,6 +88,9 @@ public class FastaExporter {
                 }
                 writer.println("");
             }
+        }
+        catch (DatabaseException e) {
+            logger.log(Level.SEVERE, "Unexpected error", e);
         }
         finally {
             pi_cursor.close();
@@ -91,7 +109,7 @@ public class FastaExporter {
         storeConfig.setAllowCreate(true);
 
         // Open the environment and entity store
-        environment = new Environment(envHome, envConfig);
+        environment = new Environment(envDir, envConfig);
         store = new EntityStore(environment, "FastaStore", storeConfig);
 
     }

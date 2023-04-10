@@ -1,0 +1,125 @@
+fastaBaseDir: /home/oogasawa/blast_test_dataset
+datasets:
+  - dataSet: DDBJ_standard
+    fastaFiles:
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjhum.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjpri.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjrod.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjmam.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjvrt.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjinv.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjpln.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjbct.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjvrl.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjphg.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjenv.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjsyn.+\\.seq\\.gz
+  - dataSet: DDBJ_other
+    fastaFiles:
+      - dir: na/ddbj/fasta
+        filePattern: .+est.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjgss.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjsts.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjhtc.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjhtg.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjuna.+\\.seq\\.gz
+      - dir: na/ddbj/fasta
+        filePattern: .+ddbjtsa.+\\.fasta\\.gz
+  - dataSet: rRNA16S
+    fastaFiles:
+      - dir: na/16S/fasta
+        filePattern: \\.fasta\\.gz
+  - dataSet: RefSeq_daily
+    fastaFiles:
+      - dir: na/refseq/fasta/daily
+        filePattern: \\.fna\\.gz
+  - dataSet: RefSeq_genomic
+    fastaFiles:
+      - dir: na/refseq/fasta/release/archaea
+        filePattern: genomic\\.fna\\.gz
+      - dir: na/refseq/fasta/release/bacteria
+        filePattern: genomic\\.fna\\.gz
+      - dir: na/refseq/fasta/release/fungi
+        filePattern: genomic\\.fna\\.gz
+      - dir: na/refseq/fasta/release/invertebrate
+        filePattern: genomic\\.fna\\.gz
+      - dir: na/refseq/fasta/release/mitochondrion
+        filePattern: genomic\\.fna\\.gz
+      - dir: na/refseq/fasta/release/plant
+        filePattern: genomic\\.fna\\.gz
+      - dir: na/refseq/fasta/release/plasmid
+        filePattern: genomic\\.fna\\.gz
+      - dir: na/refseq/fasta/release/plastid
+        filePattern: genomic\\.fna\\.gz
+      - dir: na/refseq/fasta/release/protozoa
+        filePattern: genomic\\.fna\\.gz
+      - dir: na/refseq/fasta/release/vertebrate_mamalian
+        filePattern: genomic\\.fna\\.gz
+      - dir: na/refseq/fasta/release/vertebrate_other
+        filePattern: genomic\\.fna\\.gz
+      - dir: na/refseq/fasta/release/virus
+        filePattern: genomic\\.fna\\.gz
+      - dir: na/refseq/fasta/release/other
+        filePattern: genomic\\.fna\\.gz
+  - dataSet: RefSeq_RNA
+    fastaFiles:
+      - dir: na/refseq/fasta/release/archaea
+        filePattern: rna\\.fna\\.gz
+      - dir: na/refseq/fasta/release/bacteria
+        filePattern: rna\\.fna\\.gz
+      - dir: na/refseq/fasta/release/fungi
+        filePattern: rna\\.fna\\.gz
+      - dir: na/refseq/fasta/release/invertebrate
+        filePattern: rna\\.fna\\.gz
+      - dir: na/refseq/fasta/release/mitochondrion
+        filePattern: rna\\.fna\\.gz
+      - dir: na/refseq/fasta/release/plant
+        filePattern: rna\\.fna\\.gz
+      - dir: na/refseq/fasta/release/plasmid
+        filePattern: rna\\.fna\\.gz
+      - dir: na/refseq/fasta/release/plastid
+        filePattern: rna\\.fna\\.gz
+      - dir: na/refseq/fasta/release/protozoa
+        filePattern: rna\\.fna\\.gz
+      - dir: na/refseq/fasta/release/vertebrate_mamalian
+        filePattern: rna\\.fna\\.gz
+      - dir: na/refseq/fasta/release/vertebrate_other
+        filePattern: rna\\.fna\\.gz
+      - dir: na/refseq/fasta/release/virus
+        filePattern: rna\\.fna\\.gz
+      - dir: na/refseq/fasta/release/other
+        filePattern: rna\\.fna\\.gz
+  - dataSet: RefSeq_model
+    fastaFiles:
+      - dir: na/refseq/fasta/B_taurus/mRNA_Prot
+        filePattern: \\.fna\\.gz
+      - dir: na/refseq/fasta/D_rerio/mRNA_Prot
+        filePattern: \\.fna\\.gz
+      - dir: na/refseq/fasta/H_sapiens/mRNA_Prot
+        filePattern: \\.fna\\.gz
+      - dir: na/refseq/fasta/M_musculus/mRNA_Prot
+        filePattern: \\.fna\\.gz
+      - dir: na/refseq/fasta/R_norvegicus/mRNA_Prot
+        filePattern: \\.fna\\.gz
+      - dir: na/refseq/fasta/S_scrofa/mRNA_Prot
+        filePattern: \\.fna\\.gz
+      - dir: na/refseq/fasta/X_tropicalis/mRNA_Prot
+        filePattern: \\.fna\\.gz
+

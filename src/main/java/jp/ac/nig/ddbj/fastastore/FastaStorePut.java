@@ -27,8 +27,8 @@ public class FastaStorePut {
 
     private static final Logger logger = Logger.getLogger("jp.ac.nig.ddbj.fastastore.FastaStorePut");
 
-    /** The database environment's home directory. */
-    private static File envHome;
+    // /** The database environment's home directory. */
+    // private static File envDir;
 
     private Environment environment;
     private EntityStore store;
@@ -36,27 +36,34 @@ public class FastaStorePut {
 
     Pattern pSeqId = Pattern.compile("^>(\\S+?)\\|");
     Pattern pRefseqId = Pattern.compile("^>(\\S+?)\s");
+    Pattern pNcbiSeqId = Pattern.compile("^>[a-z]{1,8}\\|(\\S+?)\\|");
+    Pattern pDdbjSeqId = Pattern.compile(">\\S+\\|(\\S+\\.[0-9]+)\\s");
     
     private long counter = 0;
     private long start;
     
     public static void main(String[] args) {
 
-        if (args.length > 2) {
+        if (args.length > 3) {
             FastaStorePut store = new FastaStorePut();
-            store.setEnvHome(Path.of(args[0]));
+//            store.setEnvDir(Path.of(args[0]));
 
-            store.readAll(Path.of(args[1]), args[2]);
+            Path fastaDir = Path.of(args[1]);
+            Pattern filePattern = Pattern.compile(args[2]);
+            Path bdbDir = Path.of(args[0]);
+            String datasetName = "FastaStore";
+            store.readAll(fastaDir, filePattern, bdbDir, datasetName);
             
         } else {
             System.out.println(
-                    "Usage: java -cp fastastore-fat.jar jp.ac.nig.ddbj.fastastore.FastaStorePut bdb_dir fasta_dir fasta_ext");
+                "Usage: java -cp fastastore-fat.jar jp.ac.nig.ddbj.fastastore.FastaStorePut bdb_dir fasta_dir filePattern datasetName");
         }
         
     }
 
-
-
+    
+    /** Default constructor. */
+    public FastaStorePut() {}
 
     /** Checks if a given file is a gzipped file.
      *
@@ -79,9 +86,26 @@ public class FastaStorePut {
 
     /** Parses a definition line and returns a sequenceId.
      *
-     * There are several types of FASTA definition lines.
+     * <p>There are several types of FASTA definition lines.</p>
      *
-     * 1. RefSeq FASTA definition line.
+     *
+     * <p>1. DDBJ style definition lines.</p>
+     *
+     * <pre>{@code
+     * >AG122442|AG122442.1 Pan troglodytes DNA, clone: PTB-131M17.R.
+     * }</pre>
+     *
+     * In this case, the sequnce ID is {@code AG122442.1}.
+     * 
+     * <p>2. NCBI style definition lines.</p>
+     *
+     * <pre>{@code
+     * >tr|A0A6J1A7R8|A0A6J1A7R8_9ROSI RING-type E3 ubiquitin transferase OS=Herrania umbratica OX=108875 GN=LOC110415795 PE=4 SV=1
+     * }</pre>
+     *
+     * In this case, the sequence ID is {@code A0A6J1A7R8}.
+     * 
+     * <p>3. RefSeq FASTA definition line.</p>
      *
      * <pre>{@code
      * >NZ_CP088252.1 Frateuria soli strain 5GH9-11 chromosome, complete genome
@@ -89,17 +113,29 @@ public class FastaStorePut {
      *
      * This case, the sequence ID is {@code NZ_CP099252.1}.
      * 
-     * 2. DDBJ nucleic acids definition line.
-     * <pre>{@code
-     * >CP100557|CP100557.1 Gallus gallus breed Huxu chromosome 3
-     * }</pre>
      *
-     * In this example, the sequence ID is {@code CP100557}.
+     *
+     * 
      */
     public String parseSequenceId(String definitionLine) {
         String seqId = null;
-        
-        Matcher m = pSeqId.matcher(definitionLine);
+
+        Matcher m = null;
+
+        m = pDdbjSeqId.matcher(definitionLine);
+        if (m.find()) {
+            seqId = m.group(1);
+            return seqId;
+        }
+
+
+        m = pNcbiSeqId.matcher(definitionLine);
+        if (m.find()) {
+            seqId = m.group(1);
+            return seqId;
+        }
+
+        m = pSeqId.matcher(definitionLine);
         if (m.find()) {
             seqId = m.group(1);
             return seqId;
@@ -110,6 +146,7 @@ public class FastaStorePut {
             seqId = m.group(1);
             return seqId;
         }
+
         
         
         return seqId;
@@ -125,21 +162,27 @@ public class FastaStorePut {
      *
      * Therefore, sequence IDs will not overlap on the resulting database.
      * 
-     * @param fastaBasePath A directory where FASTA files are located.
-     * @param ext An extension. (e.g. ".fna.gz")
+     * @param fastaDir A full path to the directory where FASTA files are located. 
+     * @param filePattern A Pattern object that is used for filtering relevant files in the given {@code fastaPath}.
+     * @param bdbEnvDir A BerkeleyDB Environment directory.
+     * @param datasetName A data set name. (e.g. DDBJ_standard, DDBJ_other, ...)
      */
-    public void readAll(Path fastaBasePath, String ext) {
+    public void readAll(Path fastaDir, Pattern filePattern, Path bdbEnvDir, String datasetName) {
 
-        logger.logp(Level.INFO, FastaStorePut.class.getName(), "readAll", "enter");
-        logger.log(Level.INFO, "fastaBasePath: " + fastaBasePath.toString());
+        logger.logp(Level.INFO, FastaStorePut.class.getName(), "readAll",
+                    String.format("enter: fastaPath = %s, filePattern = %s, bdbEnvDir = %s, datasetName = %s",
+                                  fastaDir.toString(), filePattern.toString(), bdbEnvDir.toString(), datasetName));
 
-        setup();
+        
+        setup(bdbEnvDir, datasetName);
 
         start = System.currentTimeMillis();
 
-        logger.info("fastaBasePath " + fastaBasePath.toString());
-        Stream.of(fastaBasePath.toFile().listFiles())
-            .filter(f->f.getName().endsWith(ext))
+        Stream.of(fastaDir.toFile().listFiles())
+            .filter(f->{
+                    Matcher m = filePattern.matcher(f.getName());
+                    return m.find();
+                        })
             .sorted((f1, f2)->{
                     if ( f1.lastModified() > f2.lastModified() )
                         return 1;
@@ -172,8 +215,7 @@ public class FastaStorePut {
 
 
 
-
-    
+        
     public void readFasta(BufferedReader fastaReader) {
 
         logger.logp(Level.INFO, FastaStorePut.class.getName(), "readFasta", "enter");
@@ -255,22 +297,12 @@ public class FastaStorePut {
         } 
         
     }
-    
 
-    /** Sets the base directory of BerkeleyDB Environment.
-     *
-     * @param envPath A Path object that represents the environment base directory.
-     */
-    public void setEnvHome(Path envPath) {
-        envHome = envPath.toFile();
-        if (!envHome.exists()) {
-            envHome.mkdirs();
-        }        
-    }
+
 
 
     
-    public void setup() throws DatabaseException {
+    public void setup(Path bdbEnvDir, String datasetName) throws DatabaseException {
         EnvironmentConfig envConfig = new EnvironmentConfig();
         StoreConfig storeConfig = new StoreConfig();
 
@@ -278,9 +310,9 @@ public class FastaStorePut {
         storeConfig.setAllowCreate(true);
 
         // Open the environment and entity store
-        environment = new Environment(envHome, envConfig);
-        store = new EntityStore(environment, "FastaStore", storeConfig);
-
+        environment = new Environment(bdbEnvDir.toFile(), envConfig);
+        store = new EntityStore(environment, datasetName, storeConfig);
+        
         accessor = new FastaDA(store);
     }
 
