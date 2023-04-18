@@ -3,6 +3,7 @@ package jp.ac.nig.ddbj.fastastore;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.logging.LogManager;
 import java.util.regex.Pattern;
 
@@ -39,6 +40,8 @@ public class App
                        "Export all FASTA entries in a given BerkeleyDB database.");
         cli.addCommand("webblast:putAll", webBlastPutAllOptions(),
                        "Create a series of databases consisting of all FASTA entries used in DDBJ's BLAST Web application.");
+        cli.addCommand("webblast:getEntry", webBlastGetEntryOptions(),
+                       "Search by series ID in the database consisting of all FASTA entries used in DDBJ's BLAST Web application.");
 
         
 
@@ -73,10 +76,19 @@ public class App
                 store.setEnvDir(Path.of(cmd.getOptionValue("dbDir")));
                 store.export(cmd.getOptionValue("outfile"));
             }
+            else if (cli.getCommand().equals("webblast:getEntry")) {
+
+                String[] queries = cmd.getOptionValue("query").split(",");
+
+                WebBlastGetEntry obj = new WebBlastGetEntry();
+                obj.search(queries, cmd.getOptionValue("dbDir"));
+            }
+
             else if (cli.getCommand().equals("webblast:putAll")) {
 
                 WebBlastFastaTeam team
                     = new WebBlastFastaTeam.Builder(Path.of(cmd.getOptionValue("dbDir")))
+                    .workerThreads(Integer.valueOf(cmd.getOptionValue("threads", "1")))
                     .build();
 
                 team.start();
@@ -204,9 +216,47 @@ public class App
                         .required(true)
                         .build());
 
+        
+        opts.addOption(Option.builder("threads")
+                        .option("t")
+                        .longOpt("threads")
+                        .hasArg(true)
+                        .argName("threads")
+                        .desc("Number of worker threads.")
+                        .required(false)
+                        .build());
+
         return opts;
     }
 
+
+    
+    public static Options webBlastGetEntryOptions() {
+        Options opts = new Options();
+
+        opts.addOption(Option.builder("dbDir")
+                        .option("d")
+                        .longOpt("dbDir")
+                        .hasArg(true)
+                        .argName("dbDir")
+                        .desc("An Environment (directory) of BDB. (e.g. $HOME/tmp/fastastore)")
+                        .required(true)
+                        .build());
+
+        
+        opts.addOption(Option.builder("query")
+                        .option("q")
+                        .longOpt("query")
+                        .hasArg(true)
+                        .argName("query")
+                        .desc("A query string (sequence IDs)")
+                        .required(true)
+                        .build());
+
+        return opts;
+    }
+
+    
 
     
 }

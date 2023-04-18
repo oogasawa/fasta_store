@@ -45,7 +45,7 @@ public class FastaStoreGet {
 
         FastaEntity result = accessor.pIdx.get(seqId);
 
-        for (String line: result.getfastaData()) {
+        for (String line: result.getFastaData()) {
             System.out.println(line);
         }
         

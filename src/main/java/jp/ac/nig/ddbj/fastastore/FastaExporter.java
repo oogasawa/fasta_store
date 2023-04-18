@@ -83,7 +83,7 @@ public class FastaExporter {
 
         try {
             for (FastaEntity entity: pi_cursor) {
-                for (String line: entity.getfastaData()) {
+                for (String line: entity.getFastaData()) {
                      writer.println(line);
                 }
                 writer.println("");

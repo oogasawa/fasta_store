@@ -1,5 +1,6 @@
 package jp.ac.nig.ddbj.fastastore.info;
 
+import java.nio.file.Path;
 import java.util.List;
 
 public class FastaRepositoryInfo {
@@ -10,7 +11,14 @@ public class FastaRepositoryInfo {
 
     
     public String getFastaBaseDir() {
-        return fastaBaseDir;
+
+        if (fastaBaseDir.startsWith("/")) { // full path is given.
+            return fastaBaseDir;            
+        }
+        else { // it is interpreted as a path relative to the home.
+            return Path.of(System.getenv("HOME")).resolve(fastaBaseDir).toString();
+        }
+
     }
 
     public void setFastaBaseDir(String fastaBaseDir) {

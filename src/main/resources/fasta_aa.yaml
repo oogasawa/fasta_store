@@ -1,4 +1,4 @@
-fastaBaseDir: /home/oogasawa/blast5_fullcopy_dataset
+fastaBaseDir: BLAST
 datasets:
   - dataSet: DAD
     fastaFiles:

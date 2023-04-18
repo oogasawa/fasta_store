@@ -1,4 +1,4 @@
-fastaBaseDir: /home/oogasawa/blast_test_dataset
+fastaBaseDir: blast_test_dataset
 datasets:
   - dataSet: DAD
     fastaFiles:

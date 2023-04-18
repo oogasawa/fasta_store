@@ -66,7 +66,7 @@ public class FastaEntity {
     }
 
     
-    public ArrayList<String> getfastaData() {
+    public ArrayList<String> getFastaData() {
         return fastaData;
     }
 
