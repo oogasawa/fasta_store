@@ -106,10 +106,17 @@ usage: fasta:put -d <dbDir> -f <fastaDir> -p <filePattern> -s <dataset>
  -s,--dataset <dataset>           dataset Name (e.g. DDBJ_standard,
                                   DDBJ_other, ...)
 
-Create a series of databases consisting of all FASTA entries used in DDBJ's BLAST Web application.
-usage: webblast:putAll -d <dbDir>
+Search by series ID in the database consisting of all FASTA entries used in DDBJ's BLAST Web application.
+usage: webblast:getEntry -d <dbDir> -q <query>
  -d,--dbDir <dbDir>   An Environment (directory) of BDB. (e.g.
                       $HOME/tmp/fastastore)
+ -q,--query <query>   A query string (sequence IDs)
+
+Create a series of databases consisting of all FASTA entries used in DDBJ's BLAST Web application.
+usage: webblast:putAll -d <dbDir> [-t <threads>]
+ -d,--dbDir <dbDir>       An Environment (directory) of BDB. (e.g.
+                          $HOME/tmp/fastastore)
+ -t,--threads <threads>   Number of worker threads.
 
 ```
 
