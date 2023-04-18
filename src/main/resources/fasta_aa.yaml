@@ -1,0 +1,52 @@
+fastaBaseDir: /home/oogasawa/blast5_fullcopy_dataset
+datasets:
+  - dataSet: DAD
+    fastaFiles:
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjhum.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjpri.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjrod.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjmam.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjvrt.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjinv.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjpln.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjbct.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjvrl.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjphg.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjenv.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjsyn.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjest.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjgss.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjsts.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjhtc.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjhtg.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjuna.+\.fasta\.gz
+      - dir: aa/dad/fasta
+        filePattern: .*ddbjtsa.+\.fasta\.gz
+  - dataSet: PatentAA
+    fastaFiles:
+      - dir: aa/patent/fasta
+        filePattern: \.gz
+  - dataSet: UniProt
+    fastaFiles:
+      - dir: aa/uniprot/fasta
+        filePattern: uniprot_sprot.+\.fasta.gz
+      - dir: aa/uniprot/fasta
+        filePattern: uniprot_trembl\.fasta\.gz

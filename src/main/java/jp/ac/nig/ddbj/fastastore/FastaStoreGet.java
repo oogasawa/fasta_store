@@ -14,7 +14,7 @@ import com.sleepycat.persist.StoreConfig;
 public class FastaStoreGet {
 
     /** The database environment's home directory. */
-    private static File envHome;
+    private static File envDir;
 
     private Environment environment;
     private EntityStore store;
@@ -24,7 +24,8 @@ public class FastaStoreGet {
 
     public static void main(String args[]) {
         if (args.length > 1) {
-            FastaStoreGet store = new FastaStoreGet(Path.of(args[0]));
+            FastaStoreGet store = new FastaStoreGet();
+            store.setEnvDir(Path.of(args[0]));
             store.search(args[1]);
         }
         else {
@@ -33,10 +34,9 @@ public class FastaStoreGet {
     }
 
 
-    public FastaStoreGet(Path dir) {
-        envHome = dir.toFile();
-    }
-
+    /** Default constructor. */
+    public FastaStoreGet() {}
+    
 
     public void search(String seqId) throws DatabaseException {
 
@@ -53,17 +53,22 @@ public class FastaStoreGet {
         
     }
     
+
+    public void setEnvDir(Path dir) {
+        envDir = dir.toFile();
+    }
+
     
     public void setup() throws DatabaseException {
         EnvironmentConfig envConfig = new EnvironmentConfig();
         StoreConfig storeConfig = new StoreConfig();
 
-        envConfig.setAllowCreate(true);
-        storeConfig.setAllowCreate(true);
+        //envConfig.setAllowCreate(true);
+        //storeConfig.setAllowCreate(true);
 
         // Open the environment and entity store
-        environment = new Environment(envHome, envConfig);
-        store = new EntityStore(environment, "FastaStore", storeConfig);
+        environment = new Environment(envDir, envConfig);
+        store = new EntityStore(environment, "DDBJ_standard", storeConfig);
 
     }
 

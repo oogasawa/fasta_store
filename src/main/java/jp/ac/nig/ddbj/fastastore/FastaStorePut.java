@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -19,16 +20,20 @@ import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.StoreConfig;
 
+import jp.ac.nig.ddbj.fastastore.info.DatasetInfo;
+import jp.ac.nig.ddbj.fastastore.info.FastaFilesInfo;
+
 
 /** Placing objects in an entity store.
  *
  */
 public class FastaStorePut {
 
-    private static final Logger logger = Logger.getLogger("jp.ac.nig.ddbj.fastastore.FastaStorePut");
+    Logger logger = null;
 
-    /** The database environment's home directory. */
-    private static File envHome;
+    
+    // /** The database environment's home directory. */
+    // private static File envDir;
 
     private Environment environment;
     private EntityStore store;
@@ -36,27 +41,54 @@ public class FastaStorePut {
 
     Pattern pSeqId = Pattern.compile("^>(\\S+?)\\|");
     Pattern pRefseqId = Pattern.compile("^>(\\S+?)\s");
+    Pattern pNcbiSeqId = Pattern.compile("^>[a-z]{1,8}\\|(\\S+?)\\|");
+    Pattern pDdbjSeqId = Pattern.compile(">\\S+\\|(\\S+\\.[0-9]+)\\s");
     
-    private long counter = 0;
-    private long start;
+
+    //String datasetName = null;
+    
+    public static class Builder {
+
+        String loggerName = null;
+        
+        public Builder() {}
+
+        public Builder loggerName(String name) {
+            loggerName = name;
+            return this;
+        }
+        
+        public FastaStorePut build() {
+            FastaStorePut obj = new FastaStorePut();
+            obj.logger = Logger.getLogger(loggerName);
+            return obj;
+        }
+    }
+
+
     
     public static void main(String[] args) {
 
-        if (args.length > 2) {
+        
+        if (args.length > 3) {
             FastaStorePut store = new FastaStorePut();
-            store.setEnvHome(Path.of(args[0]));
-            store.setup();
-            store.readAll(Path.of(args[1]), args[2]);
-            store.shutdown();
+
+            Path fastaDir = Path.of(args[1]);
+            Pattern filePattern = Pattern.compile(args[2]);
+            Path bdbDir = Path.of(args[0]);
+            String datasetName = "FastaStore";
+            store.readAll(fastaDir, filePattern, bdbDir, datasetName);
+            
         } else {
             System.out.println(
-                    "Usage: java -cp fastastore-fat.jar jp.ac.nig.ddbj.fastastore.FastaStorePut bdb_dir fasta_dir fasta_ext");
+                "Usage: java -cp fastastore-fat.jar jp.ac.nig.ddbj.fastastore.FastaStorePut bdb_dir fasta_dir filePattern datasetName");
         }
         
     }
 
-
-
+    
+    /** Default constructor. */
+    public FastaStorePut() {}
 
     /** Checks if a given file is a gzipped file.
      *
@@ -74,14 +106,30 @@ public class FastaStorePut {
         }
     }
 
-
-    
+        
 
     /** Parses a definition line and returns a sequenceId.
      *
-     * There are several types of FASTA definition lines.
+     * <p>There are several types of FASTA definition lines.</p>
      *
-     * 1. RefSeq FASTA definition line.
+     *
+     * <p>1. DDBJ style definition lines.</p>
+     *
+     * <pre>{@code
+     * >AG122442|AG122442.1 Pan troglodytes DNA, clone: PTB-131M17.R.
+     * }</pre>
+     *
+     * In this case, the sequnce ID is {@code AG122442.1}.
+     * 
+     * <p>2. NCBI style definition lines.</p>
+     *
+     * <pre>{@code
+     * >tr|A0A6J1A7R8|A0A6J1A7R8_9ROSI RING-type E3 ubiquitin transferase OS=Herrania umbratica OX=108875 GN=LOC110415795 PE=4 SV=1
+     * }</pre>
+     *
+     * In this case, the sequence ID is {@code A0A6J1A7R8}.
+     * 
+     * <p>3. RefSeq FASTA definition line.</p>
      *
      * <pre>{@code
      * >NZ_CP088252.1 Frateuria soli strain 5GH9-11 chromosome, complete genome
@@ -89,17 +137,29 @@ public class FastaStorePut {
      *
      * This case, the sequence ID is {@code NZ_CP099252.1}.
      * 
-     * 2. DDBJ nucleic acids definition line.
-     * <pre>{@code
-     * >CP100557|CP100557.1 Gallus gallus breed Huxu chromosome 3
-     * }</pre>
      *
-     * In this example, the sequence ID is {@code CP100557}.
+     *
+     * 
      */
     public String parseSequenceId(String definitionLine) {
         String seqId = null;
-        
-        Matcher m = pSeqId.matcher(definitionLine);
+
+        Matcher m = null;
+
+        m = pDdbjSeqId.matcher(definitionLine);
+        if (m.find()) {
+            seqId = m.group(1);
+            return seqId;
+        }
+
+
+        m = pNcbiSeqId.matcher(definitionLine);
+        if (m.find()) {
+            seqId = m.group(1);
+            return seqId;
+        }
+
+        m = pSeqId.matcher(definitionLine);
         if (m.find()) {
             seqId = m.group(1);
             return seqId;
@@ -110,6 +170,7 @@ public class FastaStorePut {
             seqId = m.group(1);
             return seqId;
         }
+
         
         
         return seqId;
@@ -125,20 +186,29 @@ public class FastaStorePut {
      *
      * Therefore, sequence IDs will not overlap on the resulting database.
      * 
-     * @param fastaBasePath A directory where FASTA files are located.
-     * @param ext An extension. (e.g. ".fna.gz")
+     * @param fastaDir A full path to the directory where FASTA files are located. 
+     * @param filePattern A Pattern object that is used for filtering relevant files in the given {@code fastaPath}.
+     * @param bdbEnvDir A BerkeleyDB Environment directory.
+     * @param datasetName A data set name. (e.g. DDBJ_standard, DDBJ_other, ...)
      */
-    public void readAll(Path fastaBasePath, String ext) {
+    public void readAll(Path fastaDir, Pattern filePattern, Path bdbEnvDir, String datasetName) {
 
-        logger.logp(Level.INFO, FastaStorePut.class.getName(), "readAll", "enter");
-        logger.log(Level.INFO, "fastaBasePath: " + fastaBasePath.toString());
+        // logger.logp(Level.INFO, FastaStorePut.class.getName(), "readAll",
+        //             String.format("enter: fastaPath = %s, filePattern = %s, bdbEnvDir = %s, datasetName = %s",
+        //                           fastaDir.toString(), filePattern.toString(), bdbEnvDir.toString(), datasetName));
 
-        setup();
 
-        start = System.currentTimeMillis();
-        
-        Stream.of(fastaBasePath.toFile().listFiles())
-            .filter(f->f.getName().endsWith(ext))
+        setup(bdbEnvDir, datasetName);
+
+        Stream.of(fastaDir.toFile().listFiles())
+            .filter(f->{
+                    Matcher m = filePattern.matcher(f.getName());
+                    boolean result = m.find();
+                    if (result == true) {
+                        logger.info(String.format("matched: dataset = %s, file = %s, Pattern = %s", datasetName, f.getName(), filePattern.toString()));
+                    }
+                    return result;
+                        })
             .sorted((f1, f2)->{
                     if ( f1.lastModified() > f2.lastModified() )
                         return 1;
@@ -148,34 +218,201 @@ public class FastaStorePut {
                         return -1;
                 })
             .forEach((f)->{
-                    BufferedReader br;
+                    BufferedReader br = null;;
                     try {
+                        logger.log(Level.INFO, "opening BufferedReader: " + f.toString());
                         if (isGz(f)) {
                             br = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
                         }
                         else {
                             br = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
                         }
-                        logger.log(Level.INFO, "filename: " + f.toString());
-                        this.readFasta(br);
+                        this.readFasta(br, f, datasetName);
                     }
                     catch (IOException e) {
                         logger.log(Level.SEVERE, "Can not read: " + f.toString(), e);
                     }
+                    finally {
+                        logger.log(Level.INFO, "closing BufferedReader: " + f.toString());
+                        if (br != null) {
+                            try {
+                                br.close();
+                            }
+                            catch (IOException e) {
+                                logger.log(Level.SEVERE, "Can not close BufferedReader object: " + f.toString(), e);
+                            }
+                        }
+                    }
                 });
 
         shutdown();
-        
-        logger.logp(Level.INFO, FastaStorePut.class.getName(), "readAll", "exit");
+
+        // logger.logp(Level.INFO, FastaStorePut.class.getName(), "readAll",
+        //             String.format("exit: fastaPath = %s, filePattern = %s, bdbEnvDir = %s, datasetName = %s",
+        //                           fastaDir.toString(), filePattern.toString(), bdbEnvDir.toString(), datasetName));
+
+    }
+
+
+    
+
+
+    /** Reads all FASTA files in a given directory to a BDB database in date order.
+     *
+     * If there are duplicate sequence IDs, the older data will be overwritten by the later loaded one
+     * (i.e., the one with the newer file update date/time).
+     *
+     * Therefore, sequence IDs will not overlap on the resulting database.
+     * 
+     * @param DatasetInfo An object containing datasetName and a list of the pair of FASTA directories and filePatterns.
+     * @param bdbEnvDir A BerkeleyDB Environment directory.
+     */
+    public void readAll(Path fastaBaseDir, DatasetInfo ds, Path bdbEnvDir) {
+
+        // Setup an BerkeleyDB Environment for a given data set.
+        String datasetName = ds.getDataSet();
+        setup(bdbEnvDir, datasetName);
+
+
+        List<FastaFilesInfo> fastaInfoList = ds.getFastaFiles();
+
+        for (FastaFilesInfo info : fastaInfoList) {
+
+            Path fastaDir = fastaBaseDir.resolve(info.getDir());
+            Pattern filePattern = Pattern.compile(info.getFilePattern());
+
+            Stream.of(fastaDir.toFile().listFiles())
+                    .filter(f -> {
+                        Matcher m = filePattern.matcher(f.getName());
+                        boolean result = m.find();
+                        if (result == true) {
+                            logger.info(String.format("matched: dataset = %s, file = %s, Pattern = %s", datasetName,
+                                    f.getName(), filePattern.toString()));
+                        }
+                        return result;
+                    }).sorted((f1, f2) -> {
+                        if (f1.lastModified() > f2.lastModified())
+                            return 1;
+                        else if (f1.lastModified() == f2.lastModified())
+                            return 0;
+                        else
+                            return -1;
+                    }).forEach((f) -> {
+                        BufferedReader br = null;
+                        ;
+                        try {
+                            logger.log(Level.INFO, "opening BufferedReader: " + f.toString());
+                            if (isGz(f)) {
+                                br = new BufferedReader(
+                                        new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
+                            } else {
+                                br = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
+                            }
+                            this.readFasta(br, f, datasetName);
+                        } catch (IOException e) {
+                            logger.log(Level.SEVERE, "Can not read: " + f.toString(), e);
+                        } finally {
+                            logger.log(Level.INFO, "closing BufferedReader: " + f.toString());
+                            if (br != null) {
+                                try {
+                                    br.close();
+                                } catch (IOException e) {
+                                    logger.log(Level.SEVERE, "Can not close BufferedReader object: " + f.toString(), e);
+                                }
+                            }
+                        }
+                    });
+
+            
+        }
+
+        shutdown();
+
     }
 
 
 
-
     
-    public void readFasta(BufferedReader fastaReader) {
+    /** Reads all FASTA files in a given directory to a BDB database in date order.
+     *
+     * If there are duplicate sequence IDs, the older data will be overwritten by the later loaded one
+     * (i.e., the one with the newer file update date/time).
+     *
+     * Therefore, sequence IDs will not overlap on the resulting database.
+     * 
+     * @param DatasetInfo An object containing datasetName and a list of the pair of FASTA directories and filePatterns.
+     * @param bdbEnvDir A BerkeleyDB Environment directory.
+     */
+    public void readAll(Path fastaBaseDir, DatasetInfo ds, Environment environment) {
 
-        logger.logp(Level.INFO, FastaStorePut.class.getName(), "readFasta", "enter");
+        // Setup an BerkeleyDB Environment for a given data set.
+        String datasetName = ds.getDataSet();
+        this.environment = environment;
+        setupStore(datasetName);
+
+
+        List<FastaFilesInfo> fastaInfoList = ds.getFastaFiles();
+
+        for (FastaFilesInfo info : fastaInfoList) {
+
+            Path fastaDir = fastaBaseDir.resolve(info.getDir());
+            Pattern filePattern = Pattern.compile(info.getFilePattern());
+
+            Stream.of(fastaDir.toFile().listFiles())
+                    .filter(f -> {
+                        Matcher m = filePattern.matcher(f.getName());
+                        boolean result = m.find();
+                        if (result == true) {
+                            logger.info(String.format("matched: dataset = %s, file = %s, Pattern = %s", datasetName,
+                                    f.getName(), filePattern.toString()));
+                        }
+                        return result;
+                    }).sorted((f1, f2) -> {
+                        if (f1.lastModified() > f2.lastModified())
+                            return 1;
+                        else if (f1.lastModified() == f2.lastModified())
+                            return 0;
+                        else
+                            return -1;
+                    }).forEach((f) -> {
+                        BufferedReader br = null;
+                        ;
+                        try {
+                            logger.log(Level.INFO, "opening BufferedReader: " + f.toString());
+                            if (isGz(f)) {
+                                br = new BufferedReader(
+                                        new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
+                            } else {
+                                br = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
+                            }
+                            this.readFasta(br, f, datasetName);
+                        } catch (IOException e) {
+                            logger.log(Level.SEVERE, "Can not read: " + f.toString(), e);
+                        } finally {
+                            logger.log(Level.INFO, "closing BufferedReader: " + f.toString());
+                            if (br != null) {
+                                try {
+                                    br.close();
+                                } catch (IOException e) {
+                                    logger.log(Level.SEVERE, "Can not close BufferedReader object: " + f.toString(), e);
+                                }
+                            }
+                        }
+                    });
+
+            
+        }
+
+        shutdownStore();
+
+    }
+
+
+
+        
+    public void readFasta(BufferedReader fastaReader, File fastaFile, String datasetName) {
+
+        //logger.logp(Level.INFO, FastaStorePut.class.getName(), "readFasta", "enter : " + fastaFile.toString());
 
         Pattern pDescLine = Pattern.compile("^>(\\S+)\s+(.+)$");
         Pattern pSeqLine = Pattern.compile("^([ a-zA-Z]+)$");
@@ -189,6 +426,8 @@ public class FastaStorePut {
         String key = null;
         String line = null;
 
+        long start = System.currentTimeMillis();
+        long counter = 0;        
         try {
             while ((line = fastaReader.readLine()) != null) {
 
@@ -199,11 +438,17 @@ public class FastaStorePut {
                     sequenceLineNumber = 0;
                     if (counter++ % 10000 == 0) {
                         long end = System.currentTimeMillis();
-                        logger.log(Level.INFO, 
-                                String.format("entry count, elapsed time = %d\t%d", counter, (end - start) / 1000L));
+                        logger.info(String.format("dataset = %s, fasta = %s, entry count = %d, elapsed time = %d",
+                                                  datasetName, fastaFile.getName(), counter, (end - start) / 1000L));
                         logger.log(Level.INFO, line);
                         String seqId = parseSequenceId(line);
-                        logger.log(Level.INFO, seqId);
+                        logger.log(Level.INFO, String.format("sequenceID = %s", seqId));
+
+                    }
+
+                    if (counter % 1000000 == 0) {
+                        logger.log(Level.INFO, "clean BDB log");
+                        environment.cleanLog();
                     }
 
                     
@@ -237,7 +482,8 @@ public class FastaStorePut {
                     entity.addLine(line);
 
                     if (++sequenceLineNumber % 100000 == 0) {
-                        logger.log(Level.INFO, String.format("sequenceID, sequenceLineNumber = %s\t%d", key, sequenceLineNumber));
+                        logger.log(Level.INFO, String.format("dataset = %s, fasta = %s, sequenceID = %s, sequenceLineNumber = %d",
+                                                             datasetName, fastaFile.getName(), entity.getSequenceId(), sequenceLineNumber));
                     }
                     
                     continue;
@@ -247,49 +493,116 @@ public class FastaStorePut {
             }
 
             
+            long end = System.currentTimeMillis();
+            logger.info(String.format("completed: dataset = %s, fasta = %s, entry count = %d, elapsed time = %d",
+                                      datasetName, fastaFile.getName(), counter, (end - start) / 1000L));
             accessor.pIdx.put(entity);
             
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Exception occurred while reading line: " + line, e);
-        } 
+        }
+        finally {
+
+            logger.log(Level.INFO, "clean BDB log");
+            environment.cleanLog();
+            
+            logger.logp(Level.INFO, FastaStorePut.class.getName(), "readFasta",
+                        String.format("completed: dataset = %s, fasta = %s", datasetName, fastaFile.getName()));
+        }
+
         
     }
-    
 
-    /** Sets the base directory of BerkeleyDB Environment.
-     *
-     * @param envPath A Path object that represents the environment base directory.
-     */
-    public void setEnvHome(Path envPath) {
-        envHome = envPath.toFile();
-        if (!envHome.exists()) {
-            envHome.mkdirs();
-        }        
-    }
+
 
 
     
-    public void setup() throws DatabaseException {
-        EnvironmentConfig envConfig = new EnvironmentConfig();
-        StoreConfig storeConfig = new StoreConfig();
+    public void setup(Path bdbEnvDir, String datasetName)  {
 
-        envConfig.setAllowCreate(true);
-        storeConfig.setAllowCreate(true);
+        try {
+            EnvironmentConfig envConfig = new EnvironmentConfig();
+            StoreConfig storeConfig = new StoreConfig();
 
-        // Open the environment and entity store
-        environment = new Environment(envHome, envConfig);
-        store = new EntityStore(environment, "FastaStore", storeConfig);
+            envConfig.setAllowCreate(true);
+            storeConfig.setAllowCreate(true);
 
-        accessor = new FastaDA(store);
-    }
+            // Open the environment and entity store
+            Path envDir = bdbEnvDir.resolve(Path.of(datasetName));
+            logger.info("envDir = " + envDir.toString());
+            if (!envDir.toFile().exists()) {
+                envDir.toFile().mkdirs();
+            }
+            environment = new Environment(envDir.toFile(), envConfig);
+            store = new EntityStore(environment, "FASTA_db", storeConfig);
 
-    
+            accessor = new FastaDA(store);
 
-    public void shutdown() throws DatabaseException {
-
-        store.close();
-        environment.close();
+        } catch (DatabaseException e) {
+            logger.log(Level.SEVERE, "Unexpected DatabaseException", e);
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Unexpected Exception", e);
+        }
         
+    }
+
+    
+    
+    public void setupStore(String datasetName)  {
+
+        try {
+            StoreConfig storeConfig = new StoreConfig();
+            storeConfig.setAllowCreate(true);
+            store = new EntityStore(environment, datasetName, storeConfig);
+            accessor = new FastaDA(store);
+
+        } catch (DatabaseException e) {
+            logger.log(Level.SEVERE, "Unexpected DatabaseException", e);
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Unexpected Exception", e);
+        }
+        
+    }
+
+
+    
+    
+
+    public void shutdown()  {
+
+        String envStr = environment.toString();
+        logger.log(Level.INFO, "this.environment.toString() = " + envStr);
+        try {
+            if (store != null) {
+                store.close();
+            }
+            if (environment != null) {
+                environment.cleanLog();
+                environment.close();
+            }
+        }
+        catch (DatabaseException e) {
+            logger.log(Level.SEVERE, "Unexpected DatabaseException", e);
+        }
+        catch (Exception e) {
+            logger.log(Level.SEVERE, "Unexpected Exception", e);
+        }
+    }
+
+
+    
+    public void shutdownStore()  {
+
+        try {
+            if (store != null) {
+                store.close();
+            }
+        }
+        catch (DatabaseException e) {
+            logger.log(Level.SEVERE, "Unexpected DatabaseException", e);
+        }
+        catch (Exception e) {
+            logger.log(Level.SEVERE, "Unexpected Exception", e);
+        }
     }
 
 

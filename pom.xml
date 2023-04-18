@@ -6,7 +6,7 @@
 
   <groupId>jp.ac.nig.ddbj</groupId>
   <artifactId>fasta-store</artifactId>
-  <version>1.1.0</version>
+  <version>1.1.0-alpha1</version>
 
   <name>fasta-store</name>
   <!-- FIXME change it to the project's website -->
@@ -14,12 +14,18 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>19</maven.compiler.source>
-    <maven.compiler.target>19</maven.compiler.target>
+    <maven.compiler.source>20</maven.compiler.source>
+    <maven.compiler.target>20</maven.compiler.target>
   </properties>
 
   <dependencies>
 
+    <dependency>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <version>1.21</version>            
+    </dependency>
+    
     <dependency>
       <artifactId>je</artifactId>
       <groupId>com.sleepycat</groupId>
@@ -28,10 +34,22 @@
 
     <dependency>
       <groupId>com.github.oogasawa</groupId>
+      <artifactId>Utility-cli</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.github.oogasawa</groupId>
+      <artifactId>POJO-bdd</artifactId>
+      <version>1.4.2</version>
+    </dependency>
+
+    
+    <dependency>
+      <groupId>com.github.oogasawa</groupId>
       <artifactId>POJO-actor</artifactId>
       <version>1.1.0</version>
     </dependency>
-
     
   </dependencies>
 
@@ -48,10 +66,18 @@
           <artifactId>maven-resources-plugin</artifactId>
           <version>3.0.2</version>
         </plugin>
+
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.8.0</version>
+          <configuration>
+            <release>20</release>
+            <compilerArgs>
+            <arg>--enable-preview</arg>
+            </compilerArgs>
+          </configuration>
         </plugin>
+
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>2.22.1</version>
@@ -94,7 +120,7 @@
           <configuration>
             <archive>
               <manifest>
-                <mainClass>jp.ac.nig.ddbj.fastastore.FastaStoreGet</mainClass>
+                <mainClass>jp.ac.nig.ddbj.fastastore.App</mainClass>
               </manifest>
             </archive>
             <descriptorRefs>
