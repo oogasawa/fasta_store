@@ -71,12 +71,15 @@ public class FastaStorePut {
 
         
         if (args.length > 3) {
-            FastaStorePut store = new FastaStorePut();
+            String datasetName = "FastaStore";
+            FastaStorePut store = new FastaStorePut.Builder()
+                .loggerName(datasetName)
+                .build();
 
             Path fastaDir = Path.of(args[1]);
             Pattern filePattern = Pattern.compile(args[2]);
             Path bdbDir = Path.of(args[0]);
-            String datasetName = "FastaStore";
+
             store.readAll(fastaDir, filePattern, bdbDir, datasetName);
             
         } else {
@@ -358,6 +361,7 @@ public class FastaStorePut {
             Path fastaDir = fastaBaseDir.resolve(info.getDir());
             Pattern filePattern = Pattern.compile(info.getFilePattern());
 
+            logger.info(String.format("fastaDir = %s", fastaDir.toString()));
             Stream.of(fastaDir.toFile().listFiles())
                     .filter(f -> {
                         Matcher m = filePattern.matcher(f.getName());

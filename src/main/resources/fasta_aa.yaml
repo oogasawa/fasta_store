@@ -1,4 +1,4 @@
-fastaBaseDir: BLAST
+fastaBaseDir: blast_test_data
 datasets:
   - dataSet: DAD
     fastaFiles:

@@ -1,10 +1,17 @@
 package jp.ac.nig.ddbj.fastastore;
 
-
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.LogManager;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 import com.github.oogasawa.utility.cli.CliCommands;
@@ -28,6 +35,8 @@ public class App
             e.printStackTrace();
         }
 
+        Logger logger = Logger.getLogger("App");
+        
         
         var helpStr = "java -jar fastastore-fat.jar <command> <options>";
         var cli = new CliCommands();
@@ -78,8 +87,36 @@ public class App
             }
             else if (cli.getCommand().equals("webblast:getEntry")) {
 
-                String[] queries = cmd.getOptionValue("query").split(",");
+                List<String> queries = null;
+                String fileName = cmd.getOptionValue("queryFile");
+                if (fileName != null) {
+                    queries = new ArrayList<String>();
+                    try (var br = new BufferedReader(new InputStreamReader(new FileInputStream(fileName)))) {
+                        String line = null;
+                        while((line = br.readLine()) != null ) {
+                            queries.add(line.trim());
+                        }
+                    }
+                    catch (FileNotFoundException e) {
+                        logger.log(Level.SEVERE, "Query File not found: " + fileName, e);
+                        cli.printHelp(helpStr);
+                        return;
+                    }
+                    catch (Exception e) {
+                        logger.log(Level.SEVERE, "Unexpected Exception", e);
+                        cli.printHelp(helpStr);
+                        return;
+                    }
 
+                }
+                else if (cmd.getOptionValue("query") != null) {
+                    queries = Arrays.asList(cmd.getOptionValue("query").split(","));
+                }
+                else {
+                    cli.printHelp(helpStr);
+                    return;
+                }
+            
                 WebBlastGetEntry obj = new WebBlastGetEntry();
                 obj.search(queries, cmd.getOptionValue("dbDir"));
             }
@@ -169,8 +206,6 @@ public class App
                         .desc("A sequence ID to be searched.")
                         .required(true)
                         .build());
-
-
         
         return opts;
     }
@@ -197,8 +232,6 @@ public class App
                         .desc("A destination file for FASTA data. (e.g. result.fasta)")
                         .required(true)
                         .build());
-
-
         
         return opts;
     }
@@ -250,9 +283,19 @@ public class App
                         .hasArg(true)
                         .argName("query")
                         .desc("A query string (sequence IDs)")
-                        .required(true)
+                        .required(false)
                         .build());
 
+        opts.addOption(Option.builder("queryFile")
+                        .option("f")
+                        .longOpt("queryFile")
+                        .hasArg(true)
+                        .argName("queryFile")
+                        .desc("A file describing query query sequence IDs")
+                        .required(false)
+                        .build());
+
+        
         return opts;
     }
 
