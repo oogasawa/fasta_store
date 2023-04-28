@@ -27,7 +27,8 @@ import jp.ac.nig.ddbj.fastastore.info.FastaRepositoryInfo;
 
 public class WebBlastFastaTeam {
 
-    private static final Logger logger = Logger.getLogger("jp.ac.nig.ddbj.fastastore.team.WebBlastFastaTeam");
+    Logger logger = null;
+    //private static final Logger logger = Logger.getLogger("jp.ac.nig.ddbj.fastastore.team.WebBlastFastaTeam");
     
     /** A BerkeleyDB Environment.
      *
@@ -57,9 +58,11 @@ public class WebBlastFastaTeam {
         
         public WebBlastFastaTeam build() {
             WebBlastFastaTeam team = new WebBlastFastaTeam();
+            team.logger = Logger.getLogger("WebBlastFastaTeam");
             team.setBdbEnvDir(bdbEnvDir);
             team.setMaxWorkerThreads(maxWorkerThread);
             team.readFastaInfo();
+
             return team;
         }
     }

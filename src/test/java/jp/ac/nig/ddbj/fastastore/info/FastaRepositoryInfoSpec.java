@@ -9,6 +9,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 import com.github.oogasawa.pojobdd.BddUtil;
 
@@ -125,6 +127,7 @@ public class FastaRepositoryInfoSpec {
                 "dir = na/ddbj/fasta, filePattern = .*ddbjenv.+\\.seq\\.gz",
                 "dir = na/ddbj/fasta, filePattern = .*ddbjsyn.+\\.seq\\.gz", };
 
+        expectations[0] = replaceFastaBaseDir(expectations[0]);
         String expectation = String.join("\n", expectations);
 
         // Check the answer.
@@ -134,6 +137,14 @@ public class FastaRepositoryInfoSpec {
 
 
         //return true;
+    }
+
+
+    private static String replaceFastaBaseDir(String line) {
+        Pattern pDir = Pattern.compile("\\/home\\/oogasawa");
+        Matcher m = pDir.matcher(line);
+        String result = m.replaceAll(System.getenv("HOME"));
+        return result;
     }
 
 }
