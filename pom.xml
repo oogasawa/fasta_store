@@ -6,7 +6,7 @@
 
   <groupId>jp.ac.nig.ddbj</groupId>
   <artifactId>fasta-store</artifactId>
-  <version>1.1.0</version>
+  <version>1.1.1</version>
 
   <name>fasta-store</name>
   <!-- FIXME change it to the project's website -->
@@ -42,7 +42,7 @@
     <dependency>
       <groupId>com.github.oogasawa</groupId>
       <artifactId>POJO-actor</artifactId>
-      <version>1.1.0</version>
+      <version>1.2.0</version>
     </dependency>
     
   </dependencies>
