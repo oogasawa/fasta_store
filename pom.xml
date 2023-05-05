@@ -6,7 +6,7 @@
 
   <groupId>jp.ac.nig.ddbj</groupId>
   <artifactId>fasta-store</artifactId>
-  <version>1.1.1</version>
+  <version>1.1.2</version>
 
   <name>fasta-store</name>
   <!-- FIXME change it to the project's website -->
@@ -14,8 +14,8 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>19</maven.compiler.source>
-    <maven.compiler.target>19</maven.compiler.target>
+    <maven.compiler.source>20</maven.compiler.source>
+    <maven.compiler.target>20</maven.compiler.target>
   </properties>
 
   <dependencies>
@@ -65,7 +65,7 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.8.0</version>
           <configuration>
-            <release>19</release>
+            <release>20</release>
             <compilerArgs>
             <arg>--enable-preview</arg>
             </compilerArgs>
@@ -74,8 +74,12 @@
 
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.22.1</version>
+          <version>2.22.2</version>
+          <configuration>
+            <argLine>--enable-preview</argLine>
+          </configuration>
         </plugin>
+
         <plugin>
           <artifactId>maven-jar-plugin</artifactId>
           <version>3.0.2</version>
