@@ -66,12 +66,14 @@ public class App
 
             }
             else if (cli.getCommand().equals("fasta:put")) {
-                FastaStorePut store = new FastaStorePut();
+                FastaStorePut store = new FastaStorePut.Builder()
+                    .loggerName("ddbj.FastaStorePut")
+                    .build();
                 //store.setEnvDir(Path.of(cmd.getOptionValue("dbDir")));
                 
                 
                 store.readAll(Path.of(cmd.getOptionValue("fastaDir")),
-                              Pattern.compile(cmd.getOptionValue("extension")),
+                              Pattern.compile(cmd.getOptionValue("filePattern")),
                               Path.of(cmd.getOptionValue("dbDir")),
                               cmd.getOptionValue("dataset") );
             }
@@ -83,7 +85,7 @@ public class App
             else if (cli.getCommand().equals("fasta:export")) {
                 FastaExporter store = new FastaExporter();
                 store.setEnvDir(Path.of(cmd.getOptionValue("dbDir")));
-                store.export(cmd.getOptionValue("outfile"));
+                store.export(cmd.getOptionValue("outfile"), cmd.getOptionValue("dataset"));
             }
             else if (cli.getCommand().equals("webblast:getEntry")) {
 
@@ -232,6 +234,17 @@ public class App
                         .desc("A destination file for FASTA data. (e.g. result.fasta)")
                         .required(true)
                         .build());
+
+
+        opts.addOption(Option.builder("dataset")
+                        .option("s")
+                        .longOpt("dataset")
+                        .hasArg(true)
+                        .argName("dataset")
+                        .desc("dataset Name (e.g. DDBJ_standard, DDBJ_other, ...)")
+                        .required(true)
+                        .build());
+
         
         return opts;
     }

@@ -2,6 +2,8 @@ target/
 .settings/
 .classpath
 .project
+refseq_daily/
+*.fasta
 
 # Compiled class file
 *.class

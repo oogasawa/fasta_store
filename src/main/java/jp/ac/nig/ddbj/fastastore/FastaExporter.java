@@ -23,7 +23,7 @@ import com.sleepycat.persist.StoreConfig;
  */
 public class FastaExporter {
 
-    private static final Logger logger = Logger.getLogger("jp.ac.nig.ddbj.fastastore.FastaExporter");
+    private static final Logger logger = Logger.getLogger("ddbj.FastaExporter");
     
     /** The database environment's home directory. */
     private static File envDir;
@@ -33,21 +33,21 @@ public class FastaExporter {
     //private FastaDA accessor;
     
 
-    public static void main(String args[]) {
-        if (args.length > 1) {
-            FastaExporter store = new FastaExporter();
-            store.setEnvDir(Path.of(args[0]));
-            try (PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(args[11])))) {
-                store.export(pw);
-            }
-            catch (IOException e) {
-                logger.log(Level.SEVERE, "Error on output file: " + args[1], e);
-            }
-        }
-        else {
-            System.out.println("Usage: java -cp fastastore-fat.jar jp.ac.nig.ddbj.fastastore.FastaExporter bdb_dir output_fasta");
-        }
-    }
+    // public static void main(String args[]) {
+    //     if (args.length > 1) {
+    //         FastaExporter store = new FastaExporter();
+    //         store.setEnvDir(Path.of(args[0]));
+    //         try (PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(args[11])))) {
+    //             store.export(pw);
+    //         }
+    //         catch (IOException e) {
+    //             logger.log(Level.SEVERE, "Error on output file: " + args[1], e);
+    //         }
+    //     }
+    //     else {
+    //         System.out.println("Usage: java -cp fastastore-fat.jar jp.ac.nig.ddbj.fastastore.FastaExporter bdb_dir output_fasta");
+    //     }
+    // }
 
 
     /** A constructor.
@@ -62,9 +62,9 @@ public class FastaExporter {
     }
 
     
-    public void export(String fileName)  {
+    public void export(String fileName, String dataset)  {
         try (PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(fileName)))) {
-            this.export(pw);
+            this.export(pw, dataset);
         }
         catch (IOException e) {
             logger.log(Level.SEVERE, "Error on output file: " + fileName, e);
@@ -73,17 +73,27 @@ public class FastaExporter {
     }
 
 
-    public void export(PrintWriter writer)  {
+    public void export(PrintWriter writer, String dataset)  {
 
-        setup();
+        setup(dataset);
         //accessor = new FastaDA(store);
         
         PrimaryIndex<String, FastaEntity> pIndex = store.getPrimaryIndex(String.class, FastaEntity.class);
         EntityCursor<FastaEntity> pi_cursor = pIndex.entities();
 
         try {
+            int count = 0;
             for (FastaEntity entity: pi_cursor) {
+                int state = 0;
+                if (++count % 10000 == 0) {
+                    state = 1;
+                    logger.info(String.format("count : %d", count));
+                }
                 for (String line: entity.getFastaData()) {
+                    if (state > 0) {
+                        logger.info(String.format("line : %d, %s", count, line));
+                        state = 0;
+                    }
                      writer.println(line);
                 }
                 writer.println("");
@@ -101,16 +111,16 @@ public class FastaExporter {
     }
     
     
-    public void setup() throws DatabaseException {
+    public void setup(String dataset) throws DatabaseException {
         EnvironmentConfig envConfig = new EnvironmentConfig();
         StoreConfig storeConfig = new StoreConfig();
 
-        envConfig.setAllowCreate(true);
-        storeConfig.setAllowCreate(true);
+        // envConfig.setAllowCreate(true);
+        // storeConfig.setAllowCreate(true);
 
         // Open the environment and entity store
         environment = new Environment(envDir, envConfig);
-        store = new EntityStore(environment, "FastaStore", storeConfig);
+        store = new EntityStore(environment, dataset, storeConfig);
 
     }
 

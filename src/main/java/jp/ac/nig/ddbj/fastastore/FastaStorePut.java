@@ -196,9 +196,9 @@ public class FastaStorePut {
      */
     public void readAll(Path fastaDir, Pattern filePattern, Path bdbEnvDir, String datasetName) {
 
-        // logger.logp(Level.INFO, FastaStorePut.class.getName(), "readAll",
-        //             String.format("enter: fastaPath = %s, filePattern = %s, bdbEnvDir = %s, datasetName = %s",
-        //                           fastaDir.toString(), filePattern.toString(), bdbEnvDir.toString(), datasetName));
+        logger.logp(Level.INFO, FastaStorePut.class.getName(), "readAll",
+                    String.format("enter: fastaPath = %s, filePattern = %s, bdbEnvDir = %s, datasetName = %s",
+                                  fastaDir.toString(), filePattern.toString(), bdbEnvDir.toString(), datasetName));
 
 
         setup(bdbEnvDir, datasetName);
